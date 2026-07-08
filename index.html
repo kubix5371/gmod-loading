@@ -716,80 +716,72 @@ function animateRain(){
 }
 animateRain();
 
-// GMOD HOOKS
+// GMOD HOOKS - FINAL VERSION
 let filesTotal = 0;
 let filesNeeded = 0;
 
-// 1. Dane serwera + avatar
+window.addEventListener('load', () => {
+  // Domyślne wartości
+  document.getElementById('loadBar').style.width = '0%';
+  document.getElementById('loadPercent').textContent = '0%';
+  document.getElementById('playerNick').textContent = 'Gracz';
+});
+
+// 1. GMod ZAWSZE wywołuje to z SteamID64
 window.GameDetails = function(servername, serverurl, mapname, maxplayers, steamid, gamemode) {
   if(servername) document.getElementById('serverName').textContent = servername;
   if(mapname) document.getElementById('mapName').textContent = mapname;
   if(gamemode) document.getElementById('gameMode').textContent = gamemode;
   if(maxplayers) document.getElementById('playerCount').textContent = '0/' + maxplayers;
   
+  // Avatar działa w 99% przypadków
   if(steamid) {
-    document.getElementById('playerAvatar').src = `https://avatars.steamstatic.com/${steamid}_full.jpg`;
-    document.getElementById('playerAvatar').onerror = function() {
+    const avatar = document.getElementById('playerAvatar');
+    avatar.src = `https://avatars.steamstatic.com/${steamid}_full.jpg`;
+    avatar.onerror = function() {
       this.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="24" height="24"%3E%3Ccircle cx="12" cy="12" r="12" fill="%234a90e2"/%3E%3Ctext x="12" y="16" text-anchor="middle" fill="white" font-size="10" font-weight="700"%3E?%3C/text%3E%3C/svg%3E';
     };
   }
 };
 
-// 2. Status + wyciąganie nicku
+// 2. Nick wyciągamy stąd - GMod wysyła "Kubix537 connecting to server..."
 window.SetStatusChanged = function(status) {
   document.getElementById('statusText').textContent = status;
   
-  // Łap nick z "Nick dołącza do gry"
-  if(status.includes('dołącza') || status.includes('łączy') || status.includes('connecting')) {
-    let nick = status.split(' ')[0];
-    if(nick && nick.length > 1 &&!nick.startsWith('7656')) {
-      document.getElementById('playerNick').textContent = nick;
+  // Lista słów które NIE są nickiem
+  const ignoreWords = ['Connecting', 'Sending', 'Starting', 'Loading', 'Downloading', 'Requesting', 'Retrying', 'Workshop'];
+  
+  // Bierzemy pierwsze słowo które nie jest na liście
+  let words = status.split(' ');
+  for(let word of words) {
+    word = word.replace(/[.,!]/g, ''); // usuń kropki
+    if(word.length > 2 &&!word.includes('7656') &&!ignoreWords.includes(word)) {
+      document.getElementById('playerNick').textContent = word;
+      break; // znaleziono nick, stop
     }
   }
   
-  // Wyciągnij licznik graczy jak GMod poda
+  // Licznik graczy
   let playerMatch = status.match(/(\d+)\/(\d+)/);
   if(playerMatch) {
     document.getElementById('playerCount').textContent = playerMatch[0];
   }
 };
 
-// 3. Pasek ładowania
-window.SetFilesTotal = function(total) {
-  filesTotal = total;
-};
-
+// 3. Pasek
+window.SetFilesTotal = function(total) { filesTotal = total; };
 window.SetFilesNeeded = function(needed) {
   filesNeeded = needed;
-  let percent = 0;
-  if (filesTotal > 0) {
-    percent = Math.floor(((filesTotal - filesNeeded) / filesTotal) * 100);
-  }
-  if (isNaN(percent)) percent = 0;
-  if (percent > 100) percent = 100;
+  let percent = filesTotal > 0? Math.floor(((filesTotal - needed) / filesTotal) * 100) : 0;
+  percent = Math.max(0, Math.min(100, percent));
   
   document.getElementById('loadBar').style.width = percent + '%';
   document.getElementById('loadPercent').textContent = percent + '%';
 };
 
-// 4. Nazwa pobieranego pliku
 window.DownloadingFile = function(filename) {
   document.getElementById('statusText').textContent = 'Pobieranie: ' + filename;
 };
-
-// 5. Backup na start
-window.addEventListener('load', () => {
-  setTimeout(() => {
-    let nickEl = document.getElementById('playerNick');
-    if(nickEl.textContent.startsWith('7656') || nickEl.textContent == '') {
-      nickEl.textContent = 'Gracz';
-    }
-  }, 2000);
-  
-  // Ustaw 0% na start
-  document.getElementById('loadBar').style.width = '0%';
-  document.getElementById('loadPercent').textContent = '0%';
-});
 
 window.SetFilesNeeded(0);
 </script>
