@@ -58,7 +58,7 @@
       .game-bg {
         position: fixed;
         inset: 0;
-        background: #0a0806 url('bg-gmod.jpg') center/cover no-repeat;
+        background: #0a0806 url("bg-gmod.jpg") center/cover no-repeat;
         z-index: 0;
         transform: scale(1.02);
       }
@@ -851,12 +851,19 @@
 
       $("musicBanner").onclick = function () {
         const a = $("bgAudio");
-        a.volume = 0.28;
+        a.volume = 0.1;
         a.play()
           .then(() => this.remove())
           .catch(() => {
             this.textContent = "Nie udało się włączyć muzyki";
           });
+      };
+      // Background fallback
+      const img = new Image();
+      img.src = "bg-gmod.jpg";
+      img.onerror = () => {
+        document.querySelector(".game-bg").innerHTML =
+          '<div style="position:absolute;inset:0;display:grid;place-items:center;color:var(--accent);font-weight:700;font-size:18px;z-index:999">Wrzuć bg-gmod.jpg obok index.html</div>';
       };
       const canvas = $("rainCanvas");
       const ctx = canvas.getContext("2d");
