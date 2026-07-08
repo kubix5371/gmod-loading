@@ -59,7 +59,7 @@
         position: fixed;
         inset: 0;
         background: #0a0806
-          url("https://raw.githubusercontent.com/kubix5371/gmod-loading/refs/heads/main/bg-gmod.jpg")
+          url("bg-gmod.jpg")
           center/cover no-repeat;
         z-index: 0;
         transform: scale(1.02);
@@ -860,8 +860,7 @@
             this.textContent = "Nie udało się włączyć muzyki";
           });
       };
-      const BG_URL =
-        "https://raw.githubusercontent.com/kubix5371/gmod-loading/refs/heads/main/bg-gmod.jpg";
+      const BG_URL = "bg-gmod.jpg";
       const bgTest = new Image();
       bgTest.onload = function () {
         $("gameBg").style.backgroundImage = "url('" + BG_URL + "')";
