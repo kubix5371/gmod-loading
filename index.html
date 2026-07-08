@@ -36,7 +36,7 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,Blink
 <div class="grid-overlay"></div>
 <div class="scanline"></div>
 <div class="fog"></div>
-<div id="musicBanner" class="music-banner">Głośnik: kliknij, aby włączyć muzykę</div>
+<div id="musicBanner" class="music-banner">🔊 KLIKNIJ, ABY WŁĄCZYĆ MUZYKĘ</div>
 <audio id="bgAudio" src="music.mp3" autoplay loop preload="auto" style="display:none"></audio>
 <div class="container">
   <header class="header">
@@ -79,6 +79,7 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,Blink
 const CONFIG = {
   theme:{preset:'darkrp-blue'},
   server:{name:'OLD DAYS',ip:'oldays.pl',maxPlayers:32},
+  steam:{proxyUrl:'https://old-days-steam.kubix5371.workers.dev'},
   owners:[
     {name:'kubix537',role:'Właściciel',avatar:'https://avatars.fastly.steamstatic.com/20f98c8b013401ad634e0373700b34fdea564c3e_full.jpg'},
     {name:'oluch',role:'Właściciel',avatar:'https://avatars.fastly.steamstatic.com/27e1bce9fbcddd7b7328a06ae4daaaaeacdf784d_full.jpg'},
@@ -93,9 +94,9 @@ const CONFIG = {
     'Słuchaj administracji i zgłaszaj problemy spokojnie'
   ],
   socials:[
-    {name:'Discord',icon:'DC',url:'#'},
-    {name:'Steam',icon:'ST',url:'#'},
-    {name:'TikTok',icon:'TT',url:'#'}
+    {name:'Discord',icon:'💬',url:'#'},
+    {name:'Steam',icon:'🎮',url:'#'},
+    {name:'TikTok',icon:'📱',url:'#'}
   ],
   tips:[
     '<b>Tip:</b> Przeczytaj zasady przed wejściem na serwer.',
@@ -107,6 +108,9 @@ const $ = (id) => document.getElementById(id);
 const FALLBACK_AVATAR = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96"><defs><linearGradient id="g" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#4a90e2"/><stop offset="1" stop-color="#111827"/></linearGradient></defs><rect width="96" height="96" rx="48" fill="url(#g)"/><circle cx="48" cy="36" r="18" fill="white" opacity=".9"/><path d="M18 84c6-20 20-30 30-30s24 10 30 30" fill="white" opacity=".9"/></svg>');
 let filesTotal = 0;
 let filesNeeded = 0;
+let downloadedFiles = 0;
+let fallbackProgress = 0;
+let lastNeededValue = null;
 let lastSteamId = '';
 let profileLoaded = false;
 
@@ -129,18 +133,33 @@ const canvas=$('rainCanvas');const ctx=canvas.getContext('2d');let drops=[];func
 function setStatus(text){ if(text) $('statusText').textContent = String(text); }
 function setFileLine(text){ $('fileLine').textContent = text || 'Przygotowywanie zasobów...'; }
 function setProgress(percent, indeterminate){const bar=$('loadBar');const safe=Math.max(0,Math.min(100,Math.round(percent||0)));bar.classList.toggle('indeterminate',!!indeterminate);if(!indeterminate)bar.style.width=safe+'%';$('loadPercent').textContent=indeterminate?'...':safe+'%';}
+function bumpFallbackProgress(amount){fallbackProgress=Math.max(fallbackProgress,0);fallbackProgress=Math.min(94,fallbackProgress+(amount||1));setProgress(fallbackProgress,false);}
 function setPlayerName(name){if(!name)return;const cleaned=String(name).replace(/[<>]/g,'').trim();if(cleaned && cleaned.length>1)$('playerNick').textContent=cleaned.slice(0,40);}
 function setAvatar(url){if(!url)return;const avatar=$('playerAvatar');avatar.onerror=function(){this.onerror=null;this.src=FALLBACK_AVATAR;};avatar.src=url;}
 function getQueryValue(key){return new URLSearchParams(window.location.search).get(key) || '';}
-function applyQueryData(){const name=getQueryValue('name')||getQueryValue('nick')||getQueryValue('player');const avatar=getQueryValue('avatar');const steamid=getQueryValue('steamid')||getQueryValue('steamid64');if(name)setPlayerName(name);if(avatar)setAvatar(avatar);if(steamid)loadSteamProfile(steamid);}applyQueryData();
+function applyQueryData(){const name=getQueryValue('name')||getQueryValue('nick')||getQueryValue('player');const avatar=getQueryValue('avatar');const steamid=getQueryValue('steamid')||getQueryValue('steamid64');const ip=getQueryValue('ip')||getQueryValue('serverip')||getQueryValue('address');if(ip)$('serverIP').textContent=ip;if(name)setPlayerName(name);if(avatar)setAvatar(avatar);if(steamid)loadSteamProfile(steamid);}applyQueryData();
 
 async function loadSteamProfile(steamid){
   if(!steamid || steamid===lastSteamId && profileLoaded)return;
   lastSteamId = steamid;
   $('playerSubline').textContent = 'sprawdzam profil Steam';
   $('steamNote').textContent = 'SteamID64: ' + steamid;
-  setAvatar('https://steamcommunity.com/profiles/' + encodeURIComponent(steamid) + '/avatarfull');
   try{
+    if(CONFIG.steam && CONFIG.steam.proxyUrl){
+      const proxyUrl = CONFIG.steam.proxyUrl.replace(/\/$/, '') + '?steamid=' + encodeURIComponent(steamid);
+      const proxyRes = await Promise.race([
+        fetch(proxyUrl, {cache:'no-store'}),
+        new Promise(function(resolve, reject){ setTimeout(function(){ reject(new Error('Steam proxy timeout')); }, 4000); })
+      ]);
+      if(!proxyRes.ok) throw new Error('Steam proxy HTTP ' + proxyRes.status);
+      const data = await proxyRes.json();
+      if(data.name) setPlayerName(data.name);
+      if(data.avatar) setAvatar(data.avatar);
+      profileLoaded = true;
+      $('playerSubline').textContent = 'łączy się z serwerem';
+      $('steamNote').textContent = 'Dane gracza pobrane bezpiecznie przez Steam API.';
+      return;
+    }
     const profileUrl = 'https://steamcommunity.com/profiles/' + encodeURIComponent(steamid) + '/?xml=1';
     const res = await Promise.race([
       fetch(profileUrl, {cache:'no-store'}),
@@ -161,7 +180,7 @@ async function loadSteamProfile(steamid){
     $('steamNote').textContent = 'Dane gracza pobrane z publicznego profilu Steam.';
   }catch(err){
     $('playerSubline').textContent = 'łączy się z serwerem';
-    $('steamNote').textContent = 'Garry\'s Mod podał SteamID64. Jeśli nick albo awatar się nie pokaże, profil Steam blokuje odczyt albo loading host nie pozwala na zapytanie do Steam.';
+    $('steamNote').textContent = 'Garry\'s Mod podał SteamID64, ale pobranie profilu Steam nie odpowiedziało. Sprawdź adres proxy Steam w CONFIG.steam.proxyUrl.';
   }
 }
 function maybeNameFromStatus(status){
@@ -169,28 +188,42 @@ function maybeNameFromStatus(status){
   const match = text.match(/^(.{3,40}?)\s+(?:connected|connecting|joins|joined|łączy|dolacza|dołącza)/i);
   if(match && !/^(connecting|loading|downloading|sending|starting|requesting|workshop|pobieranie|ladowanie|ładowanie)$/i.test(match[1])) setPlayerName(match[1]);
   const players = text.match(/(\d+)\s*\/\s*(\d+)/); if(players) $('playerCount').textContent = players[1] + '/' + players[2];
+  if(/sending client info|client info|starting lua|lua|workshop complete|mounting|initializing/i.test(text)) bumpFallbackProgress(4);
+  if(/sending client info|complete|finished|got lua/i.test(text)){fallbackProgress=100;setProgress(100,false);}
 }
 
 window.GameDetails = function(servername, serverurl, mapname, maxplayers, steamid, gamemode){
   if(servername) $('serverName').textContent = servername;
-  if(serverurl) $('serverIP').textContent = serverurl;
+  // GMod podaje tutaj URL loading screena, nie IP serwera, więc nie nadpisujemy pola IP.
   if(mapname) $('mapName').textContent = mapname;
   if(gamemode) $('gameMode').textContent = gamemode;
   if(maxplayers) $('playerCount').textContent = '0/' + maxplayers;
   if(steamid) loadSteamProfile(String(steamid));
 };
 window.SetStatusChanged = function(status){setStatus(status);maybeNameFromStatus(status);};
-window.SetFilesTotal = function(total){filesTotal = Number(total) || 0; if(filesTotal>0)setProgress(0,false);};
+window.SetFilesTotal = function(total){filesTotal = Number(total) || 0; downloadedFiles = 0; lastNeededValue = null; fallbackProgress = 0; if(filesTotal>0)setProgress(0,false);};
 window.SetFilesNeeded = function(needed){
   filesNeeded = Number(needed) || 0;
-  if(filesTotal > 0){setProgress(((filesTotal - filesNeeded) / filesTotal) * 100, false);setFileLine(filesNeeded>0?'Pozostało plików: '+filesNeeded:'Kończenie ładowania...');}
-  else setProgress(0,true);
+  if(lastNeededValue !== null && filesNeeded < lastNeededValue) downloadedFiles += (lastNeededValue - filesNeeded);
+  lastNeededValue = filesNeeded;
+  if(filesTotal > 0){
+    const percent = ((filesTotal - filesNeeded) / filesTotal) * 100;
+    fallbackProgress = Math.max(fallbackProgress, percent);
+    setProgress(fallbackProgress, false);
+    setFileLine(filesNeeded>0?'Pozostało plików: '+filesNeeded:'Kończenie ładowania...');
+  } else {
+    bumpFallbackProgress(1);
+    setFileLine(filesNeeded>0?'Pozostało plików: '+filesNeeded:'Pobieranie zasobów...');
+  }
 };
-window.DownloadingFile = function(filename){setStatus('Pobieranie zasobów');setFileLine('Pobieranie: ' + filename);if(!filesTotal)setProgress(0,true);};
+window.DownloadingFile = function(filename){downloadedFiles++;setStatus('Pobieranie zasobów');setFileLine('Pobieranie: ' + filename);if(filesTotal>0){const guessedNeeded=Math.max(0,filesTotal-downloadedFiles);window.SetFilesNeeded(guessedNeeded);}else{bumpFallbackProgress(downloadedFiles < 6 ? 3 : 1);}};
 setProgress(0, false);
 </script>
 </body>
 </html>
+
+
+
 
 
 
