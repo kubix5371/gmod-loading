@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OLD DAYS v10 - Loading Screen</title>
+<style>
+:root{
+  --accent:#4a90e2;
+  --accent-dark:#2d5aa0;
+  --accent-glow:rgba(74,144,226,.4);
+  --bg:#0a0806;
+  --bg-secondary:#12100e;
+  --text:#f0f0f0;
+  --text-secondary:#a0a0a0;
+  --border:rgba(74,144,226,.2);
+}
+
+[data-theme="blood-red"]{
+  --accent:#e24a4a;
+  --accent-dark:#a02d2d;
+  --accent-glow:rgba(226,74,74,.4);
+  --border:rgba(226,74,74,.2);
+}
+[data-theme="classic-orange"]{
+  --accent:#ff8c42;
+  --accent-dark:#cc6a28;
+  --accent-glow:rgba(255,140,66,.4);
+  --border:rgba(255,140,66,.2);
+}
+[data-theme="matrix-green"]{
+  --accent:#42ff8c;
+  --accent-dark:#28cc6a;
+  --accent-glow:rgba(66,255,140,.4);
+  --border:rgba(66,255,140,.2);
+}
+
+*{margin:0;padding:0;box-sizing:border-box}
+
+html,body{
+  width:100%;
+  height:100%;
+  overflow:hidden;
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubuntu,Cantarell,sans-serif;
+  color:var(--text);
+  background:var(--bg);
+}
+
+.game-bg{
+  position:fixed;
+  inset:0;
+  background:#0a0806 url('bg-gmod.jpg') center/cover no-repeat;
+  z-index:0;
+}
+.game-bg::after{
+  content:'';
+  position:absolute;
+  inset:0;
+  background:radial-gradient(circle at 50% 50%,transparent 0%,var(--bg) 100%);
+  backdrop-filter:blur(3px) brightness(0.4);
+}
+
+#rainCanvas{
+  position:fixed;
+  inset:0;
+  z-index:1;
+  opacity:.35;
+  pointer-events:none;
+}
+
+.grid-overlay{
+  position:fixed;
+  inset:0;
+  background-image:
+    linear-gradient(var(--border) 1px,transparent 1px),
+    linear-gradient(90deg,var(--border) 1px,transparent 1px);
+  background-size:50px 50px;
+  z-index:2;
+  opacity:.3;
+  pointer-events:none;
+}
+
+.fog{
+  position:fixed;
+  inset:0;
+  z-index:3;
+  background:radial-gradient(ellipse at 20% 80%,var(--accent-glow) 0%,transparent 50%),
+             radial-gradient(ellipse at 80% 20%,var(--accent-glow) 0%,transparent 50%);
+  opacity:.15;
+  filter:blur(80px);
+  pointer-events:none;
+  animation:fogMove 20s ease-in-out infinite;
+}
+@keyframes fogMove{
+  0%,100%{transform:translate(0,0) scale(1)}
+  50%{transform:translate(30px,-20px) scale(1.1)}
+}
+
+.music-banner{
+  position:fixed;
+  top:20px;
+  left:50%;
+  transform:translateX(-50%);
+  z-index:99999;
+  background:linear-gradient(135deg,var(--accent),var(--accent-dark));
+  color:#000;
+  padding:16px 32px;
+  border-radius:12px;
+  font-weight:900;
+  cursor:pointer;
+  box-shadow:0 0 30px var(--accent);
+  animation:pulse 2s infinite;
+  font-size:14px;
+  letter-spacing:.5px;
+  user-select:none;
+  transition:transform .2s;
+}
+.music-banner:hover{transform:translateX(-50%) scale(1.05)}
+@keyframes pulse{
+  0%,100%{box-shadow:0 0 30px var(--accent)}
+  50%{box-shadow:0 0 50px var(--accent),0 0 70px var(--accent-glow)}
+}
+
+.container{
+  position:relative;
+  z-index:10;
+  width:100%;
+  height:100vh;
+  max-width:1920px;
+  margin:0 auto;
+  display:grid;
+  grid-template-columns:380px 1fr 380px;
+  grid-template-rows:auto 1fr auto;
+  gap:24px;
+  padding:24px;
+}
+
+.header{
+  grid-column:1 / -1;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:20px 32px;
+  background:rgba(18,16,14,.7);
+  backdrop-filter:blur(20px);
+  border:1px solid var(--border);
+  border-radius:16px;
+  box-shadow:0 8px 32px rgba(0,0,0,.4);
+}
+
+.logo{
+  display:flex;
+  align-items:center;
+  gap:16px;
+}
+.logo-icon{
+  width:48px;
+  height:48px;
+  background:linear-gradient(135deg,var(--accent),var(--accent-dark));
+  border-radius:12px;
+  display:grid;
+  place-items:center;
+  font-weight:900;
+  font-size:20px;
+  color:#000;
+  box-shadow:0 0 20px var(--accent-glow);
+}
+.logo h1{
+  font-size:28px;
+  font-weight:900;
+  background:linear-gradient(135deg,var(--accent),var(--text));
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  background-clip:text;
+  letter-spacing:1px;
+}
+
+.server-info{
+  display:flex;
+  align-items:center;
+  gap:32px;
+}
+.meta-item{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+}
+.meta-label{
+  font-size:11px;
+  color:var(--text-secondary);
+  text-transform:uppercase;
+  letter-spacing:1px;
+  margin-bottom:4px;
+}
+.meta-value{
+  font-size:16px;
+  font-weight:700;
+  color:var(--accent);
+}
+
+.mini-progress{
+  width:100%;
+  max-width:400px;
+  margin:12px auto 0;
+  height:4px;
+  background:rgba(255,255,255,.1);
+  border-radius:2px;
+  position:relative;
+}
+.mini-bar{
+  position:relative;
+  width:100%;
+  height:100%;
+}
+.mini-bar i{
+  position:absolute;
+  left:0;
+  top:0;
+  height:100%;
+  width:0%;
+  background:var(--accent);
+  border-radius:2px;
+  transition:width .3s;
+  box-shadow:0 0 10px var(--accent-glow);
+}
+#loadPercent{
+  position:absolute;
+  right:-40px;
+  top:-6px;
+  font-size:11px;
+  color:var(--accent);
+  font-weight:700;
+}
+
+.left-panel,.right-panel{
+  display:flex;
+  flex-direction:column;
+  gap:20px;
+}
+
+.card{
+  background:rgba(18,16,14,.7);
+  backdrop-filter:blur(20px);
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:24px;
+  box-shadow:0 8px 32px rgba(0,0,0,.4);
+  transition:transform .3s,box-shadow .3s;
+}
+.card:hover{
+  transform:translateY(-2px);
+  box-shadow:0 12px 48px rgba(0,0,0,.6);
+}
+.card-title{
+  font-size:14px;
+  font-weight:800;
+  text-transform:uppercase;
+  letter-spacing:1.5px;
+  color:var(--accent);
+  margin-bottom:16px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.card-title::before{
+  content:'';
+  width:4px;
+  height:16px;
+  background:var(--accent);
+  border-radius:2px;
+  box-shadow:0 0 10px var(--accent-glow);
+}
+
+.connecting-player{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-size:14px;
+  margin-bottom:12px;
+  font-weight:600;
+  color:var(--accent);
+}
+.connecting-player img{
+  width:24px;
+  height:24px;
+  border-radius:50%;
+  border:1px solid var(--accent);
+  box-shadow:0 0 10px var(--accent-glow);
+}
+
+.player-card p{
+  font-size:14px;
+  line-height:1.7;
+  color:var(--text-secondary);
+}
+
+.rules-list{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+.rule-item{
+  display:flex;
+  gap:12px;
+  align-items:flex-start;
+  font-size:13px;
+  line-height:1.6;
+}
+.rule-num{
+  flex-shrink:0;
+  width:24px;
+  height:24px;
+  background:var(--accent-glow);
+  border:1px solid var(--accent);
+  border-radius:6px;
+  display:grid;
+  place-items:center;
+  font-weight:700;
+  font-size:11px;
+  color:var(--accent);
+}
+
+.center-content{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:32px;
+}
+
+.main-title{
+  text-align:center;
+}
+.main-title h2{
+  font-size:64px;
+  font-weight:900;
+  background:linear-gradient(135deg,var(--accent),#fff);
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  background-clip:text;
+  letter-spacing:2px;
+  margin-bottom:8px;
+  text-shadow:0 0 60px var(--accent-glow);
+}
+.main-title p{
+  font-size:18px;
+  color:var(--text-secondary);
+  letter-spacing:1px;
+}
+
+
+.owners-list{
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+}
+.owner-item{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:12px;
+  background:rgba(255,255,255,.03);
+  border:1px solid var(--border);
+  border-radius:10px;
+  transition:background .3s;
+}
+.owner-item:hover{background:rgba(255,255,255,.06)}
+.owner-avatar{
+  width:40px;
+  height:40px;
+  border-radius:50%;
+  background:linear-gradient(135deg,var(--accent),var(--accent-dark));
+  display:grid;
+  place-items:center;
+  font-weight:900;
+  font-size:14px;
+  color:#000;
+  flex-shrink:0;
+}
+.owner-info{
+  flex:1;
+}
+.owner-name{
+  font-weight:700;
+  font-size:14px;
+  margin-bottom:2px;
+}
+.owner-role{
+  font-size:11px;
+  color:var(--text-secondary);
+}
+
+.socials{
+  display:flex;
+  gap:12px;
+}
+.loading-bar-wrap{
+  width:100%;
+  max-width:700px;
+  margin-top:16px;
+}
+.loading-text{
+  text-align:center;
+  font-size:16px;
+  font-weight:600;
+  margin-bottom:16px;
+  color:var(--accent);
+  text-transform:uppercase;
+  letter-spacing:1px;
+}
+.loading-bar-bg{
+  width:100%;
+  height:20px;
+  background:rgba(0,0,0,.6);
+  border:2px solid var(--border);
+  border-radius:10px;
+  overflow:hidden;
+  box-shadow:inset 0 2px 10px rgba(0,0,0,.8), 0 0 20px var(--accent-glow);
+}
+.loading-bar-fill{
+  height:100%;
+  width:0%;
+  background:linear-gradient(90deg,var(--accent-dark),var(--accent),var(--accent-dark));
+  background-size:200% 100%;
+  border-radius:8px;
+  transition:width .3s ease;
+  box-shadow:0 0 15px var(--accent-glow);
+  animation:barMove 2s linear infinite;
+}
+@keyframes barMove{
+  0%{background-position:200% 0}
+  100%{background-position:-200% 0}
+}
+.social-btn{
+  flex:1;
+  padding:14px;
+  background:rgba(255,255,255,.03);
+  border:1px solid var(--border);
+  border-radius:10px;
+  color:var(--text);
+  text-decoration:none;
+  font-size:13px;
+  font-weight:600;
+  text-align:center;
+  transition:all .3s;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+}
+.social-btn:hover{
+  background:var(--accent-glow);
+  border-color:var(--accent);
+  color:var(--accent);
+  transform:translateY(-2px);
+}
+
+.footer{
+  grid-column:1 / -1;
+  text-align:center;
+  padding:16px;
+  font-size:12px;
+  color:var(--text-secondary);
+}
+
+@media(max-width:1400px){
+  .container{grid-template-columns:320px 1fr 320px;gap:16px;padding:16px}
+  .main-title h2{font-size:48px}
+}
+
+@media(max-width:1024px){
+  .container{grid-template-columns:1fr;grid-template-rows:auto auto 1fr auto}
+  .left-panel{order:2}
+  .center-content{order:1}
+  .right-panel{order:3}
+  .server-info{flex-wrap:wrap;gap:16px}
+  .main-title h2{font-size:36px}
+}
+
+@media(max-width:390px){
+  .container{padding:12px;gap:12px}
+  .header{flex-direction:column;gap:16px;padding:16px}
+  .server-info{width:100%;justify-content:space-between}
+  .main-title h2{font-size:28px}
+  .main-title p{font-size:14px}
+  .card{padding:16px}
+}
+</style>
+</head>
+<body data-theme="darkrp-blue">
+<div class="game-bg" id="gameBg"></div>
+<canvas id="rainCanvas"></canvas>
+<div class="fog"></div>
+
+<div id="musicBanner" class="music-banner">🔊 KLIKNIJ ABY WŁĄCZYĆ MUZYKĘ</div>
+<audio id="bgAudio" src="music.mp3" autoplay loop style="display:none"></audio>
+
+<div class="container">
+  <header class="header">
+    <div class="logo">
+      <div class="logo-icon"><img src="logo.png" alt="OLD DAYS" style="width:100%;height:100%;object-fit:contain"></div>
+      <h1 id="serverName">OLD DAYS</h1>
+    </div>
+    <div class="server-info">
+      <div class="meta-item">
+        <div class="meta-label">IP Serwera</div>
+        <div class="meta-value" id="serverIP">oldays.pl</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-label">Tryb Gry</div>
+        <div class="meta-value" id="gameMode">DarkRP</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-label">Mapa</div>
+        <div class="meta-value" id="mapName">rp_downtown_v4c</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-label">Gracze</div>
+        <div class="meta-value" id="playerCount">0/128</div>
+      </div>
+    </div>
+  </header>
+
+  <div class="left-panel">
+    <div class="card player-card">
+      <div class="card-title">Status Łączenia</div>
+      <div class="connecting-player">
+        <img id="playerAvatar" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Ccircle cx='12' cy='12' r='12' fill='%234a90e2'/%3E%3Ctext x='12' y='16' text-anchor='middle' fill='white' font-size='10' font-weight='700'%3E?%3C/text%3E%3C/svg%3E">
+        <span><b id="playerNick">Gracz</b> łączy się z serwerem</span>
+      </div>
+      <p>Witamy na serwerze <b>OLD DAYS</b>! Przygotuj się na najlepszy roleplay w Polsce. Pamiętaj o przestrzeganiu zasad i kulturze osobistej.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Zasady Serwera</div>
+      <div class="rules-list" id="rulesList"></div>
+    </div>
+  </div>
+
+  <div class="center-content">
+    <div class="main-title">
+      <h2>OLD DAYS</h2>
+    </div>
+    <div class="loading-bar-wrap">
+  <div class="loading-text" id="statusText">Łączenie z serwerem...</div>
+  <div class="loading-bar-bg">
+    <div class="loading-bar-fill" id="loadBar"></div>
+  </div>
+</div>
+  </div>
+
+  <div class="right-panel">
+    <div class="card">
+      <div class="card-title">Administracja</div>
+      <div class="owners-list" id="ownersList"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Społeczność</div>
+      <div class="socials" id="socialsList"></div>
+    </div>
+  </div>
+
+  <footer class="footer">
+    © 2026 OLD DAYS • Wszystkie prawa zastrzeżone
+  </footer>
+</div>
+
+<script>
+// ==========================================
+// KONFIGURACJA LOADING SCREENA
+// ==========================================
+// 1. Zapisz tło jako bg-gmod.jpg obok index.html
+// 2. Wrzuć music.mp3 obok index.html  
+// 3. Zmień CONFIG.theme.preset na blood-red/classic-orange/matrix-green jeśli chcesz inny kolor
+// ==========================================
+
+const CONFIG = {
+  theme: {
+    preset: 'darkrp-blue', // blood-red | classic-orange | matrix-green | darkrp-blue
+  },
+  server: {
+    name: 'OLD DAYS',
+    ip: 'oldays.pl',
+    maxPlayers: 32
+  },
+  owners: [
+    {name: 'kubix537', role: 'Właściciel', avatar: 'https://avatars.fastly.steamstatic.com/20f98c8b013401ad634e0373700b34fdea564c3e_full.jpg'},
+    {name: 'oluch', role: 'Właściciel', avatar: 'https://avatars.fastly.steamstatic.com/27e1bce9fbcddd7b7328a06ae4daaaaeacdf784d_full.jpg'},
+    {name: 'panczeslaw', role: 'Właściciel', avatar: 'https://avatars.fastly.steamstatic.com/c30ecf8da6d64b629b82f4e62ded2523bdb3da7d_full.jpg'}
+  ],
+  rules: [
+    'Zakaz RDM - Random Deathmatch jest surowo karany',
+    'Zakaz MetaGaming - Nie używaj informacji OOC w IC',
+    'Szanuj innych graczy - Kultura osobista obowiązkowa',
+    'Zakaz FailRP - Graj zgodnie z rolą swojej postaci',
+    'Zakaz PropBlock - Blokowanie przejść propami zabronione',
+    'Listen to Staff - Administracja ma zawsze rację'
+  ],
+  socials: [
+    {name: 'Discord', icon: '💬', url: '#'},
+    {name: 'Steam', icon: '🎮', url: '#'},
+    {name: 'TikTok', icon: '📱', url: '#'}
+  ]
+};
+
+// Init theme
+document.body.setAttribute('data-theme', CONFIG.theme.preset);
+
+// Populate server info
+document.getElementById('serverName').textContent = CONFIG.server.name;
+document.getElementById('serverIP').textContent = CONFIG.server.ip;
+
+// Populate rules
+const rulesList = document.getElementById('rulesList');
+CONFIG.rules.forEach((rule, i) => {
+  const div = document.createElement('div');
+  div.className = 'rule-item';
+  div.innerHTML = `<div class="rule-num">${i+1}</div><div>${rule}</div>`;
+  rulesList.appendChild(div);
+});
+
+// Populate owners
+const ownersList = document.getElementById('ownersList');
+CONFIG.owners.forEach(owner => {
+  const div = document.createElement('div');
+  div.className = 'owner-item';
+  div.innerHTML = `
+    <div class="owner-avatar" style="background-image:url('${owner.avatar}');background-size:cover;background-position:center;"></div>
+    <div class="owner-info">
+      <div class="owner-name">${owner.name}</div>
+      <div class="owner-role">${owner.role}</div>
+    </div>
+  `;
+  ownersList.appendChild(div);
+});
+
+// Populate socials
+const socialsList = document.getElementById('socialsList');
+CONFIG.socials.forEach(social => {
+  const a = document.createElement('a');
+  a.href = social.url;
+  a.className = 'social-btn';
+  a.innerHTML = `<span>${social.icon}</span><span>${social.name}</span>`;
+  socialsList.appendChild(a);
+});
+
+// Music banner
+document.getElementById('musicBanner').onclick = function(){
+  const a = document.getElementById('bgAudio');
+  a.src = 'music.mp3';
+  a.load();
+  a.volume = 0.3;
+  a.play().then(() => this.remove()).catch(() => this.innerHTML = 'BŁĄD: Wrzuć music.mp3 obok index.html');
+};
+
+// Background fallback
+const img = new Image();
+img.src = 'bg-gmod.jpg';
+img.onerror = () => {
+  document.querySelector('.game-bg').innerHTML = '<div style="position:absolute;inset:0;display:grid;place-items:center;color:var(--accent);font-weight:700;font-size:18px;z-index:999">Wrzuć bg-gmod.jpg obok index.html</div>';
+};
+
+// Rain effect
+const canvas = document.getElementById('rainCanvas');
+const ctx = canvas.getContext('2d');
+let drops = [];
+
+function resizeCanvas(){
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+class Drop{
+  constructor(){
+    this.reset();
+  }
+  reset(){
+    this.x = Math.random() * canvas.width;
+    this.y = Math.random() * -100;
+    this.z = Math.random() * 20 + 1;
+    this.len = Math.random() * 10 + 10;
+    this.speed = Math.random() * 5 + 5;
+  }
+  update(){
+    this.y += this.speed;
+    if(this.y > canvas.height) this.reset();
+  }
+  draw(){
+    const accentColor = getComputedStyle(document.body).getPropertyValue('--accent');
+    ctx.strokeStyle = accentColor;
+    ctx.lineWidth = this.z / 10;
+    ctx.globalAlpha = this.z / 30;
+    ctx.beginPath();
+    ctx.moveTo(this.x, this.y);
+    ctx.lineTo(this.x, this.y + this.len);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+}
+
+for(let i = 0; i < 150; i++){
+  drops.push(new Drop());
+}
+
+function animateRain(){
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drops.forEach(drop => {
+    drop.update();
+    drop.draw();
+  });
+  requestAnimationFrame(animateRain);
+}
+animateRain();
+
+// GMOD HOOKS
+let total = 0;
+let needed = 0;
+
+window.GameDetails = function(servername, serverurl, mapname, maxplayers, steamid, gamemode){
+  if(servername) document.getElementById('serverName').textContent = servername;
+  if(mapname) document.getElementById('mapName').textContent = mapname;
+  if(gamemode) document.getElementById('gameMode').textContent = gamemode;
+  if(maxplayers) CONFIG.server.maxPlayers = maxplayers;
+  document.getElementById('playerNick').textContent = steamid || 'Gracz';
+};
+
+window.SetFilesTotal = function(t){
+  total = t;
+  document.getElementById('filesTotal').textContent = t;
+};
+
+window.SetFilesNeeded = function(n){
+  needed = n;
+  document.getElementById('filesNeeded').textContent = n;
+  let pct = total > 0 ? Math.round((total - needed) / total * 100) : 0;
+  document.getElementById('loadBar').style.width = pct + '%';
+  // document.getElementById('loadPercent').textContent = pct + '%';
+  // document.getElementById('progressPercent').textContent = pct + '%';
+};
+
+window.SetStatusChanged = function(status){
+  document.getElementById('statusText').textContent = status;
+};
+
+window.DownloadingFile = function(file){
+  document.getElementById('statusText').textContent = 'Pobieranie: ' + file;
+};
+
+window.SetFilesNeeded(0);
+</script>
+<script>(function(){document.addEventListener("click",function(e){var a=e.target.closest("[data-product-id]");if(!a)return;e.preventDefault();var pid=a.getAttribute("data-product-id");if(pid)parent.postMessage({type:"ecto-artifact-link-click",productId:pid},"*")})})();</script>
+</body>
+</html>
