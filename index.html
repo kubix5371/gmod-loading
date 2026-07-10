@@ -58,9 +58,18 @@
       .game-bg {
         position: fixed;
         inset: 0;
-        background: #0a0806 url("bg-gmod.jpg") center/cover no-repeat;
+        background-image:url('./bg-gmod.jpg');
+        background-position:center;
+        background-size:cover;
+        background-repeat:no-repeat;
         z-index: 0;
-        transform: scale(1.02);
+      }
+      .game-bg::after{
+        content:'';
+        position:absolute;
+        inset:0;
+        background:radial-gradient(circle at 50% 50%,transparent 0%,var(--bg) 100%);
+        backdrop-filter:blur(3px) brightness(0.4);
       }
       #rainCanvas {
         position: fixed;
@@ -839,7 +848,7 @@
 
       $("musicBanner").onclick = function () {
         const a = $("bgAudio");
-        a.volume = 0.1;
+        a.volume = 0.03;
         a.play()
           .then(() => this.remove())
           .catch(() => {
