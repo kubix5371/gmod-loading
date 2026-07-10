@@ -55,22 +55,23 @@
         color: var(--text);
         background: var(--bg);
       }
-      .game-bg {
-        position: fixed;
-        inset: 0;
-        background-image:url('./bg-gmod.jpg');
-        background-position:center;
-        background-size:cover;
-        background-repeat:no-repeat;
-        z-index: 0;
-      }
-      .game-bg::after{
-        content:'';
-        position:absolute;
-        inset:0;
-        background:radial-gradient(circle at 50% 50%,transparent 0%,var(--bg) 100%);
-        backdrop-filter:blur(3px) brightness(0.4);
-      }
+.game-bg{
+  position:fixed;
+  inset:0;
+  background-color:#0a0806;
+  background-image:url('https://raw.githubusercontent.com/kubix5371/gmod-loading/refs/heads/main/bg-gmod.jpg');
+  background-position:center;
+  background-size:cover;
+  background-repeat:no-repeat;
+  z-index:0;
+}
+.game-bg::after{
+  content:'';
+  position:absolute;
+  inset:0;
+  background:radial-gradient(circle at 50% 50%,transparent 0%,var(--bg) 100%);
+  backdrop-filter:blur(3px) brightness(0.4);
+}
       #rainCanvas {
         position: fixed;
         inset: 0;
@@ -652,14 +653,19 @@
     <div id="musicBanner" class="music-banner">
       🔊 KLIKNIJ, ABY WŁĄCZYĆ MUZYKĘ
     </div>
-    <audio
-      id="bgAudio"
-      src="music.mp3"
-      autoplay
-      loop
-      preload="auto"
-      style="display: none"
-    ></audio>
+<audio
+  id="bgAudio"
+  src="music.mp3"
+  loop
+  preload="auto"
+  style="display: none"
+></audio>
+<script>
+  // GMod musi mieć to od razu
+  var bgAudio = document.getElementById('bgAudio');
+  bgAudio.volume = 0.1; // 100% - 60% = 40%
+  bgAudio.play().catch(()=>{}); // spróbuj odtworzyć, GMod może zablokować do kliknięcia
+</script>
     <div class="container">
       <header class="header">
         <div class="logo">
