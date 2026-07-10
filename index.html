@@ -1,18 +1,4 @@
-﻿Ten błąd `'}' expected` na linii 1018 to przez ucięty kod co Ci wkleiłem wyżej 😅 
-Przepraszam, Discord/meta.ai uciął końcówkę skryptu.
-
-**Masz 2 rzeczy do naprawy:**
-
-### 1. **Błąd składni `'}' expected`**
-W kodzie co Ci wysłałem brakuje zamknięcia funkcji `window.GameDetails`. GMod przez to wywala błąd i cały JS przestaje działać - dlatego tło się nie ładuje.
-
-### 2. **Tło + muzyka -60%**
-Żeby tło działało na serwerze + ściszyć muzę:
-
-**Oto kompletny, działający kod. Wklej cały:**
-
-```html
-<!doctype html>
+﻿<!doctype html>
 <html lang="pl">
   <head>
     <meta charset="UTF-8" />
@@ -72,12 +58,7 @@ W kodzie co Ci wysłałem brakuje zamknięcia funkcji `window.GameDetails`. GMod
       .game-bg {
         position: fixed;
         inset: 0;
-        /* POPRAWKA 1: TŁO - rozdzielone właściwości + ./ dla serwera GMod */
-        background-color: #0a0806;
-        background-image: url("./bg-gmod.jpg"); 
-        background-position: center;
-        background-size: cover;
-        background-repeat: no-repeat;
+        background: #0a0806 url("bg-gmod.jpg") center/cover no-repeat;
         z-index: 0;
         transform: scale(1.02);
       }
@@ -858,7 +839,7 @@ W kodzie co Ci wysłałem brakuje zamknięcia funkcji `window.GameDetails`. GMod
 
       $("musicBanner").onclick = function () {
         const a = $("bgAudio");
-        a.volume = 0.4; // POPRAWKA 2: 100% - 60% = 40% głośności
+        a.volume = 0.1;
         a.play()
           .then(() => this.remove())
           .catch(() => {
@@ -923,4 +904,206 @@ W kodzie co Ci wysłałem brakuje zamknięcia funkcji `window.GameDetails`. GMod
       }
       function setProgress(percent, indeterminate) {
         const bar = $("loadBar");
+        const safe = Math.max(0, Math.min(100, Math.round(percent || 0)));
+        bar.classList.toggle("indeterminate", !!indeterminate);
+        if (!indeterminate) bar.style.width = safe + "%";
+        $("loadPercent").textContent = indeterminate ? "..." : safe + "%";
       }
+      function bumpFallbackProgress(amount) {
+        fallbackProgress = Math.max(fallbackProgress, 0);
+        fallbackProgress = Math.min(94, fallbackProgress + (amount || 1));
+        setProgress(fallbackProgress, false);
+      }
+      function setPlayerName(name) {
+        if (!name) return;
+        const cleaned = String(name).replace(/[<>]/g, "").trim();
+        if (cleaned && cleaned.length > 1)
+          $("playerNick").textContent = cleaned.slice(0, 40);
+      }
+      function setAvatar(url) {
+        if (!url) return;
+        const avatar = $("playerAvatar");
+        avatar.onerror = function () {
+          this.onerror = null;
+          this.src = FALLBACK_AVATAR;
+        };
+        avatar.src = url;
+      }
+      function getQueryValue(key) {
+        return new URLSearchParams(window.location.search).get(key) || "";
+      }
+      function applyQueryData() {
+        const name =
+          getQueryValue("name") ||
+          getQueryValue("nick") ||
+          getQueryValue("player");
+        const avatar = getQueryValue("avatar");
+        const steamid = getQueryValue("steamid") || getQueryValue("steamid64");
+        const ip =
+          getQueryValue("ip") ||
+          getQueryValue("serverip") ||
+          getQueryValue("address");
+        if (ip) $("serverIP").textContent = ip;
+        if (name) setPlayerName(name);
+        if (avatar) setAvatar(avatar);
+        if (steamid) loadSteamProfile(steamid);
+      }
+      applyQueryData();
+
+      async function loadSteamProfile(steamid) {
+        if (!steamid || (steamid === lastSteamId && profileLoaded)) return;
+        lastSteamId = steamid;
+        $("playerSubline").textContent = "sprawdzam profil Steam";
+        $("steamNote").textContent = "SteamID64: " + steamid;
+        try {
+          if (CONFIG.steam && CONFIG.steam.proxyUrl) {
+            const proxyUrl =
+              CONFIG.steam.proxyUrl.replace(/\/$/, "") +
+              "?steamid=" +
+              encodeURIComponent(steamid);
+            const proxyRes = await Promise.race([
+              fetch(proxyUrl, { cache: "no-store" }),
+              new Promise(function (resolve, reject) {
+                setTimeout(function () {
+                  reject(new Error("Steam proxy timeout"));
+                }, 4000);
+              }),
+            ]);
+            if (!proxyRes.ok)
+              throw new Error("Steam proxy HTTP " + proxyRes.status);
+            const data = await proxyRes.json();
+            if (data.name) setPlayerName(data.name);
+            if (data.avatar) setAvatar(data.avatar);
+            profileLoaded = true;
+            $("playerSubline").textContent = "łączy się z serwerem";
+            $("steamNote").textContent =
+              "Dane gracza pobrane bezpiecznie przez Steam API.";
+            return;
+          }
+          const profileUrl =
+            "https://steamcommunity.com/profiles/" +
+            encodeURIComponent(steamid) +
+            "/?xml=1";
+          const res = await Promise.race([
+            fetch(profileUrl, { cache: "no-store" }),
+            new Promise(function (resolve, reject) {
+              setTimeout(function () {
+                reject(new Error("Steam profile timeout"));
+              }, 3500);
+            }),
+          ]);
+          if (!res.ok) throw new Error("Steam profile HTTP " + res.status);
+          const xmlText = await res.text();
+          const doc = new DOMParser().parseFromString(xmlText, "text/xml");
+          const nameNode = doc.querySelector("steamID");
+          const name = nameNode ? nameNode.textContent : "";
+          const avatarFullNode = doc.querySelector("avatarFull");
+          const avatarMediumNode = doc.querySelector("avatarMedium");
+          const avatar = avatarFullNode
+            ? avatarFullNode.textContent
+            : avatarMediumNode
+              ? avatarMediumNode.textContent
+              : "";
+          if (name) setPlayerName(name);
+          if (avatar) setAvatar(avatar);
+          profileLoaded = true;
+          $("playerSubline").textContent = "łączy się z serwerem";
+          $("steamNote").textContent =
+            "Dane gracza pobrane z publicznego profilu Steam.";
+        } catch (err) {
+          $("playerSubline").textContent = "łączy się z serwerem";
+          $("steamNote").textContent =
+            "Garry's Mod podał SteamID64, ale pobranie profilu Steam nie odpowiedziało. Sprawdź adres proxy Steam w CONFIG.steam.proxyUrl.";
+        }
+      }
+      function maybeNameFromStatus(status) {
+        const text = String(status || "").trim();
+        const match = text.match(
+          /^(.{3,40}?)\s+(?:connected|connecting|joins|joined|łączy|dolacza|dołącza)/i,
+        );
+        if (
+          match &&
+          !/^(connecting|loading|downloading|sending|starting|requesting|workshop|pobieranie|ladowanie|ładowanie)$/i.test(
+            match[1],
+          )
+        )
+          setPlayerName(match[1]);
+        const players = text.match(/(\d+)\s*\/\s*(\d+)/);
+        if (players)
+          $("playerCount").textContent = players[1] + "/" + players[2];
+        if (
+          /sending client info|client info|starting lua|lua|workshop complete|mounting|initializing/i.test(
+            text,
+          )
+        )
+          bumpFallbackProgress(4);
+        if (/sending client info|complete|finished|got lua/i.test(text)) {
+          fallbackProgress = 100;
+          setProgress(100, false);
+        }
+      }
+
+      window.GameDetails = function (
+        servername,
+        serverurl,
+        mapname,
+        maxplayers,
+        steamid,
+        gamemode,
+      ) {
+        if (servername) $("serverName").textContent = servername;
+        // GMod podaje tutaj URL loading screena, nie IP serwera, więc nie nadpisujemy pola IP.
+        if (mapname) $("mapName").textContent = mapname;
+        if (gamemode) $("gameMode").textContent = gamemode;
+        if (maxplayers) $("playerCount").textContent = "0/" + maxplayers;
+        if (steamid) loadSteamProfile(String(steamid));
+      };
+      window.SetStatusChanged = function (status) {
+        setStatus(status);
+        maybeNameFromStatus(status);
+      };
+      window.SetFilesTotal = function (total) {
+        filesTotal = Number(total) || 0;
+        downloadedFiles = 0;
+        lastNeededValue = null;
+        fallbackProgress = 0;
+        if (filesTotal > 0) setProgress(0, false);
+      };
+      window.SetFilesNeeded = function (needed) {
+        filesNeeded = Number(needed) || 0;
+        if (lastNeededValue !== null && filesNeeded < lastNeededValue)
+          downloadedFiles += lastNeededValue - filesNeeded;
+        lastNeededValue = filesNeeded;
+        if (filesTotal > 0) {
+          const percent = ((filesTotal - filesNeeded) / filesTotal) * 100;
+          fallbackProgress = Math.max(fallbackProgress, percent);
+          setProgress(fallbackProgress, false);
+          setFileLine(
+            filesNeeded > 0
+              ? "Pozostało plików: " + filesNeeded
+              : "Kończenie ładowania...",
+          );
+        } else {
+          bumpFallbackProgress(1);
+          setFileLine(
+            filesNeeded > 0
+              ? "Pozostało plików: " + filesNeeded
+              : "Pobieranie zasobów...",
+          );
+        }
+      };
+      window.DownloadingFile = function (filename) {
+        downloadedFiles++;
+        setStatus("Pobieranie zasobów");
+        setFileLine("Pobieranie: " + filename);
+        if (filesTotal > 0) {
+          const guessedNeeded = Math.max(0, filesTotal - downloadedFiles);
+          window.SetFilesNeeded(guessedNeeded);
+        } else {
+          bumpFallbackProgress(downloadedFiles < 6 ? 3 : 1);
+        }
+      };
+      setProgress(0, false);
+    </script>
+  </body>
+</html>
